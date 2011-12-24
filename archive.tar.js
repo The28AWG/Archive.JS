@@ -150,68 +150,51 @@ if (!Archive) {
 			var offset = 0;
 			header.name = parseName(bh, offset, constant.NAMELEN);
 			offset += constant.NAMELEN;
-			console.log('parseTarHeader(): header.name=' + header.name);
 
 			header.mode = parseOctal(bh, offset, constant.MODELEN);
 			offset += constant.MODELEN;
-			console.log('parseTarHeader(): header.mode=' + header.mode);
 
 			header.userId = parseOctal(bh, offset, constant.UIDLEN);
 			offset += constant.UIDLEN;
-			console.log('parseTarHeader(): header.userId=' + header.userId);
 
 			header.groupId = parseOctal(bh, offset, constant.GIDLEN);
 			offset += constant.GIDLEN;
-			console.log('parseTarHeader(): header.groupId=' + header.groupId);
 
 			header.size = parseOctal(bh, offset, constant.SIZELEN);
 			offset += constant.SIZELEN;
-			console.log('parseTarHeader(): header.size=' + header.size);
 
 			header.modTime = parseOctal(bh, offset, constant.MODTIMELEN);
 			offset += constant.MODTIMELEN;
-			console.log('parseTarHeader(): header.modTime=' + header.modTime);
 
 			header.checkSum = parseOctal(bh, offset, constant.CHKSUMLEN);
 			offset += constant.CHKSUMLEN;
-			console.log('parseTarHeader(): header.checkSum=' + header.checkSum);
 
 			header.linkFlag = String.fromCharCode(bh[offset++]);
-			console.log('parseTarHeader(): header.linkFlag=' + header.linkFlag);
 
 			header.linkName = parseName(bh, offset, constant.NAMELEN);
 			offset += constant.NAMELEN;
-			console.log('parseTarHeader(): header.linkName=' + header.linkName);
 
 			header.magic = parseName(bh, offset, constant.MAGICLEN);
 			offset += constant.MAGICLEN;
-			console.log('parseTarHeader(): header.magic=' + header.magic);
 
 			header.userName = parseName(bh, offset, constant.UNAMELEN);
 			offset += constant.UNAMELEN;
-			console.log('parseTarHeader(): header.userName=' + header.userName);
 
 			header.groupName = parseName(bh, offset, constant.GNAMELEN);
 			offset += constant.GNAMELEN;
-			console.log('parseTarHeader(): header.groupName='
-					+ header.groupName);
 
 			header.devMajor = parseOctal(bh, offset, constant.DEVLEN);
 			offset += constant.DEVLEN;
-			console.log('parseTarHeader(): header.devMajor=' + header.devMajor);
 
 			header.devMinor = parseOctal(bh, offset, constant.DEVLEN);
-			console.log('parseTarHeader(): header.devMinor=' + header.devMinor);
 			var data = new Array();
 			for ( var i = offset; i < bh.length; i++) {
 				data.push(String.fromCharCode(bh[i]));
 			}
 
-			console.log((512 - data.length) == offset);
 		}
 		function skipPad(skipSize) {
 
-			console.log('START >> skipPad(): skipSize=' + skipSize);
 			if (skipSize > 0) {
 				var extra = skipSize % constant.DATA_BLOCK;
 
@@ -223,11 +206,8 @@ if (!Archive) {
 							break;
 						bs += res;
 					}
-					console.log('LOG >> skipPad(): bs=' + bs + ' extra:'
-							+ extra);
 				}
 			}
-			console.log('END >> skipPad(): skipSize=' + skipSize);
 		}
 		return {
 			getNextEntry : function() {
@@ -258,12 +238,10 @@ if (!Archive) {
 					console.log('eof=' + eof);
 					return null;
 				}
-				console.log('getNextEntry(): parseTarHeader()');
 				parseTarHeader(bh);
 				skipPad(constant.HEADER_BLOCK);
 				// console.log('bh: ' + bh);
 				if (header.name == '') {
-					console.log('header.name == \'\'');
 					return null;
 				}
 
@@ -283,11 +261,10 @@ if (!Archive) {
 					isDirectory : isDirectory()
 				};
 			},
-			getFileData : function(asBytes) {
-				var bh = new Array();
-				var tdata = new Array();
-				var tr = 0;
-				// Read full header
+			getFileData : function() {
+				bh = new Array();
+				tdata = new Array();
+				tr = 0;
 				while (tr < header.size) {
 					tdata = stream.read(header.size - tr);
 					if (tdata.length == 0) {
@@ -297,17 +274,12 @@ if (!Archive) {
 					tr += tdata.length;
 					tdata = [];
 				}
-				console.log('tr: ' + tr);
-				function toData(byte) {
-					var data = new Array();
-					for ( var i = 0; i < byte.length; i++) {
-						data.push(String.fromCharCode(byte[i]));
-					}
-					return data.join('');
-				}
+				var BlobBuilderObj = new (window.BlobBuilder || window.WebKitBlobBuilder)();
+				BlobBuilderObj.append(bh);
+				bh = null;
 				skipPad(header.size);
 				header = null;
-				return asBytes ? bh : Archive.Utils.UTF8.decode(toData(bh));
+				return BlobBuilderObj.getBlob();
 			}
 		};
 	};
